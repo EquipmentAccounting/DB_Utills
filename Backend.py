@@ -2,9 +2,10 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy import create_engine, Column, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-from typing import List
+from fastapi_admin.factory import app as admin_app
 
 app = FastAPI()
+Base = declarative_base()
 
 # Создание базы данных
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -26,7 +27,6 @@ class Device(Base):
 # Создание таблицы
 Base.metadata.create_all(bind=engine)
 
-
 # Функция зависимости для получения сессии базы данных
 def get_db():
     db = SessionLocal()
@@ -35,6 +35,11 @@ def get_db():
     finally:
         db.close()
 
+# Регистрация модели устройства в административной панели
+admin_app.register_model(Device, db_session=SessionLocal, db_engine=engine)
+
+# Монтируем административную панель на маршрут /admin
+app.mount("/admin", admin_app)
 
 # Эндпоинт для поиска устройств
 @app.get("/search")
