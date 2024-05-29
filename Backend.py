@@ -1,13 +1,22 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy import create_engine, Column, String, Integer, Date, Float, ForeignKey
-from sqlalchemy.orm import sessionmaker, Session, relationship
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import sessionmaker, Session, relationship, declarative_base
 from datetime import date
 from typing import Optional
 
-app = FastAPI()
+from models.device import device
 
-Base = declarative_base()
+app = FastAPI()
+class Base:
+    allow_unmapped = True
+
+    async def save(self, session: AsyncSession):
+        session.add(self)
+        await session.commit()
+
+
+Base = declarative_base(cls=Base)
 
 # Создание базы данных
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -15,33 +24,6 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-class Place(Base):
-    __tablename__ = 'places'
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True, unique=True)
-    # Другие поля места, если есть
-
-    devices = relationship("Device", back_populates="place")
-
-
-class Device(Base):
-    __tablename__ = 'devices'
-
-    name = Column(String)
-    category = Column(String)
-    place_id = Column(Integer, ForeignKey('places.id'))  # Внешний ключ на таблицу мест
-    version = Column(String)
-    id = Column(Integer, primary_key=True)
-    releaseDate = Column(Date)
-    softwareStartDate = Column(Date)
-    softwareEndDate = Column(Date)
-    manufacturer = Column(String)
-    xCord = Column(Float)
-    yCoord = Column(Float)
-    waveRadius = Column(Float)
-
-    place = relationship("Place", back_populates="devices")
 
 
 Base.metadata.create_all(bind=engine)
@@ -64,33 +46,33 @@ def search_items(q: Optional[str] = None, category: Optional[str] = None, place:
                  manufacturer: Optional[str] = None, xCord: Optional[float] = None,
                  yCoord: Optional[float] = None, waveRadius: Optional[float] = None, db: Session = Depends(get_db)):
 
-    query = db.query(Device)
+    query = db.query(device)
 
     # Фильтрация по параметрам запроса
     if q:
-        query = query.filter(Device.name.ilike(f"%{q}%"))
+        query = query.filter(device.name.ilike(f"%{q}%"))
     if category:
-        query = query.filter(Device.category == category)
+        query = query.filter(device.category == category)
     if place:
-        query = query.filter(Device.place.has(name=place))
+        query = query.filter(device.place.has(name=place))
     if version:
-        query = query.filter(Device.version == version)
+        query = query.filter(device.version == version)
     if id:
-        query = query.filter(Device.id == id)
+        query = query.filter(device.id == id)
     if releaseDate:
-        query = query.filter(Device.releaseDate == releaseDate)
+        query = query.filter(device.releaseDate == releaseDate)
     if softwareStartDate:
-        query = query.filter(Device.softwareStartDate == softwareStartDate)
+        query = query.filter(device.softwareStartDate == softwareStartDate)
     if softwareEndDate:
-        query = query.filter(Device.softwareEndDate == softwareEndDate)
+        query = query.filter(device.softwareEndDate == softwareEndDate)
     if manufacturer:
-        query = query.filter(Device.manufacturer == manufacturer)
+        query = query.filter(device.manufacturer == manufacturer)
     if xCord:
-        query = query.filter(Device.xCord == xCord)
+        query = query.filter(device.xCord == xCord)
     if yCoord:
-        query = query.filter(Device.yCoord == yCoord)
+        query = query.filter(device.yCoord == yCoord)
     if waveRadius:
-        query = query.filter(Device.waveRadius == waveRadius)
+        query = query.filter(device.waveRadius == waveRadius)
 
     result = query.all()
 
@@ -126,17 +108,23 @@ def search_items(q: Optional[str] = None, category: Optional[str] = None, place:
 @app.post("/add_device")
 def add_device(name: str, category: str, place_id: int, version: str, id: int, releaseDate: date,
                 softwareStartDate: date, softwareEndDate: date, manufacturer: str,
-                xCord: float, yCoord: float, waveRadius: float, db: Session = Depends(get_db)):
+                xCord: float, yCoord: float, waveRadius: float, db: Session=Depends(get_db())):
 
     # Проверяем, существует ли устройство с таким же именем
-    if db.query(Device).filter(Device.name == name).first():
+    if db.query(device).filter(device.name == name).first():
         raise HTTPException(status_code=400, detail="Device with this name already exists")
 
     # Создаем новое устройство и добавляем его в базу данных
-    new_device = Device(name=name, category=category, place_id=place_id, version=version,
+    new_device = device(name=name, category=category, place_id=place_id, version=version,
                         id=id, releaseDate=releaseDate, softwareStartDate=softwareStartDate,
                         softwareEndDate=softwareEndDate, manufacturer=manufacturer,
                         xCord=xCord, yCoord=yCoord, waveRadius=waveRadius)
     db.add(new_device)
     db.commit()
     return {"message": "Device added successfully"}
+
+if __name__ == "__main__":
+    add_device(name="MyDevice", category="computers", place_id=1, version="1.0.0",
+                     id=1, releaseDate=date(2021, 1, 1), softwareStartDate=date(2021, 1, 1),
+                     softwareEndDate=date(2021, 1, 1), manufacturer="MyManufacturer",
+                     xCord=0.0, yCoord=0.0, waveRadius=0.0)
