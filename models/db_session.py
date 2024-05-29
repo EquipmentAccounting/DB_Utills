@@ -2,6 +2,7 @@ from functools import wraps
 from os import environ
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
+import json
 
 
 class Base:
@@ -21,11 +22,14 @@ __factory = None
 
 def get_database_url(alembic: bool = False) -> str:
     schema = "postgresql+asyncpg"
+    file = open(".\\data\\config_db.json")
+    data = json.load(file)
+    file.close()
 
     if alembic:
         schema = "postgresql"
-    return (f"{schema}://{env('db_login')}:{env('db_password')}@"
-            f"{env('db_host')}:{env('db_port')}/{env('db_name')}")
+    return (f"{schema}://{data['db_login']}:{data['db_password']}@"
+            f"{data['db_host']}:{data['db_port']}/{data['db_name']}")
 
 
 async def global_init():

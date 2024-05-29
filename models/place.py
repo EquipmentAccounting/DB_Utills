@@ -5,7 +5,6 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.ext.declarative import declarative_base
 from models.db_session import Base
 
-Base = declarative_base()
 
 class place(Base):
     __tablename__ = 'places'
@@ -82,6 +81,6 @@ class place(Base):
         """
         _ = await session.execute(select(cls).where(cls.name == name))
         return _.scalars().all()
-async def save(self, session: AsyncSession):
-    session.add(self)
-    await session.commit()
+    async def save(self, session: AsyncSession):
+        session.add(self)
+        await session.commit()

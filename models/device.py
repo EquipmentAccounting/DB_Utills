@@ -6,7 +6,6 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.ext.declarative import declarative_base
 from models.db_session import Base
 
-Base = declarative_base()
 
 class device(Base):
     __tablename__ = 'devices'

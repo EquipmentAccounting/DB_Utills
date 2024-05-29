@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.device import device
 from models.place import place
 from models.db_session import global_init, session_db
-from models.user import User
 
 
 async def main():
@@ -18,14 +17,13 @@ async def main():
 #     use = await User.get_user(telegram_id=15, session=session)
 #     user_name = use.username
 #     print(user_name)
-    async with session_db() as session:
-        await test(session)
 
+    await test()
 
 @session_db
-async def test(session):
+async def test(session: AsyncSession):
     test_device = device(
-        name="Test Device",
+        name="Komputer",
         category="Test Category",
         place_id=1,
         version="1.0",
@@ -37,17 +35,30 @@ async def test(session):
         yCoord=0.0,
         waveRadius=1.0
     )
-    test_place = place(name="Test Place")
+    test_device1 = device(
+        name="Test Device1",
+        category="Test Category1",
+        place_id=2,
+        version="2.0",
+        releaseDate=datetime.now().date(),
+        softwareStartDate=datetime.now().date(),
+        softwareEndDate=datetime.now().date(),
+        manufacturer="Test Manufacturer1",
+        xCord=2.0,
+        yCoord=2.0,
+        waveRadius=2.0
+    )
+    test_place = place(name="Test Place1")
 
     # Сначала сохраните место, чтобы у него был id
     await test_place.save(session=session)
 
     # Затем присвойте id места устройству
     test_device.place_id = test_place.id
-
+    test_device1.place_id = test_place.id
     # Сохраните устройство
     await test_device.save(session=session)
-
+    await test_device1.save(session=session)
     # Подтвердите изменения
     await session.commit()
 
